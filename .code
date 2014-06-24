@@ -1,0 +1,341 @@
+
+
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_TFTLCD.h> // Hardware-specific library
+#include <TouchScreen.h>
+
+// The control pins for the LCD can be assigned to any digital or
+// analog pins...but we'll use the analog pins as this allows us to
+// double up the pins with the touch screen.
+#define LCD_CS A3 // Chip Select goes to Analog 3
+#define LCD_CD A2 // Command/Data goes to Analog 2
+#define LCD_WR A1 // LCD Write goes to Analog 1
+#define LCD_RD A0 // LCD Read goes to Analog 0
+
+#define LCD_RESET A4 // Can alternately just connect to Arduino's reset pin
+
+// When using the BREAKOUT BOARD only, use these 8 data lines to the LCD:
+// For the Arduino Uno, Duemilanove, Diecimila, etc.:
+//   D0 connects to digital pin 8  (Notice these are
+//   D1 connects to digital pin 9   NOT in order!)
+//   D2 connects to digital pin 2
+//   D3 connects to digital pin 3
+//   D4 connects to digital pin 4
+//   D5 connects to digital pin 5
+//   D6 connects to digital pin 6
+//   D7 connects to digital pin 7
+// For the Arduino Mega, use digital pins 22 through 29
+// (on the 2-row header at the end of the board).
+
+// These are the pins for the shield!
+#define YP A1  // must be an analog pin, use "An" notation!
+#define XM A2  // must be an analog pin, use "An" notation!
+#define YM 7   // can be a digital pin
+#define XP 6   // can be a digital pin
+
+
+// For better pressure precision, we need to know the resistance
+// between X+ and X- Use any multimeter to read it
+// For the one we're using, its 300 ohms across the X plate
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
+
+// Assign human-readable names to some common 16-bit color values:
+#define	BLACK   0x0000
+#define	BLUE    0x001F
+#define	RED     0xF800
+#define	GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+#define cap1 A5
+#define cap2 A4
+
+long temps=0;
+long t1=0;
+long t2=0;
+int s1=0;
+int s2=0;
+int i=0;
+int commencer=0;
+
+ int t=90;
+ int hold=0;
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+// If using the shield, all control and data lines are fixed, and
+// a simpler declaration can optionally be used:
+// Adafruit_TFTLCD tft;
+
+void setup(void) {
+  // initialisation of the scores 
+  s1=0;
+  s2=0;
+  // déclaration des variables d'entrée pour les deux capteurs
+  pinMode(cap1,INPUT);
+  pinMode(cap2,INPUT);
+ 
+  Serial.begin(9600);
+// Libraries used for the screen
+#ifdef USE_ADAFRUIT_SHIELD_PINOUT
+  Serial.println(F("Using Adafruit 2.8\" TFT Arduino Shield Pinout"));
+#else
+  Serial.println(F("Using Adafruit 2.8\" TFT Breakout Board Pinout"));
+#endif
+
+  tft.reset();
+
+  uint16_t identifier = tft.readID();
+
+  if(identifier == 0x9325) {
+    Serial.println(F("Found ILI9325 LCD driver"));
+  } else if(identifier == 0x9328) {
+    Serial.println(F("Found ILI9328 LCD driver"));
+  } else if(identifier == 0x7575) {
+    Serial.println(F("Found HX8347G LCD driver"));
+  } else if(identifier == 0x9341) {
+    Serial.println(F("Found ILI9341 LCD driver"));
+  } else {
+    Serial.print(F("Unknown LCD driver chip: "));
+    Serial.println(identifier, HEX);
+    Serial.println(F("If using the Adafruit 2.8\" TFT Arduino shield, the line:"));
+    Serial.println(F("  #define USE_ADAFRUIT_SHIELD_PINOUT"));
+    Serial.println(F("should appear in the library header (Adafruit_TFT.h)."));
+    Serial.println(F("If using the breakout board, it should NOT be #defined!"));
+    Serial.println(F("Also if using the breakout, double-check that all wiring"));
+    Serial.println(F("matches the tutorial."));
+    return;
+  }
+
+  tft.begin(identifier);
+
+  
+  
+  // Initialisation of the screen
+  tft.setRotation(1);
+  tft.fillScreen(WHITE);
+  tft.setCursor(120,10);
+  tft.setTextColor(BLACK);
+  tft.setTextSize(3);
+  tft.println("TIME:");
+  tft.setTextColor(RED);
+  tft.setTextSize(4);
+  tft.setCursor(60,100);
+  tft.println("P1");
+  tft.setTextColor(BLUE);    tft.setTextSize(4);
+  tft.setCursor(210,100);
+  tft.println("P2");
+  tft.println();
+  tft.setTextColor(RED); tft.setTextSize(6);
+  tft.setCursor(60,150);
+  tft.println("0");
+  tft.setTextColor(BLUE); tft.setTextSize(6);
+  tft.setCursor(210,150);
+  tft.println("0");
+  Triangles();
+  tft.fillRect(265, 5, 40, 40, RED);
+  
+}
+
+  void loop(void) {
+    holdon();
+    arret();
+    start();
+ 
+ 
+   if( i> 90 or s1==7 or s2==7){
+    tft.fillScreen(BLACK);
+    tft.fillRect(265, 5, 40, 40, RED);
+    tft.setCursor(60,10);
+    tft.setTextColor(WHITE);  tft.setTextSize(2);
+    tft.println("PARTIE TERMINEE");
+
+    if (s1>s2) {
+      tft.setCursor(10,150);
+      tft.setTextColor(YELLOW); 
+      tft.setTextSize(3);
+      tft.println("WINNER : PLAYER 1");
+    }
+    else {
+      if (s1<s2) {
+      tft.setCursor(10,150);
+      tft.setTextColor(YELLOW); 
+      tft.setTextSize(3);
+      tft.println("WINNER : PLAYER 2");
+      }
+      else {
+      tft.setCursor(10,150);
+      tft.setTextColor(YELLOW); 
+      tft.setTextSize(3);
+      tft.println("DEUCE");
+      }
+   }
+   /*stop*/
+   hold=1;
+   }
+  
+   else{  
+    
+    testText(cap1State(),cap2State());
+    if(millis()-temps>=1000 and i<t+1){
+      tft.setCursor(125,40);
+      tft.setTextColor(WHITE);
+      tft.println(t-i+1);
+      tft.setCursor(125,40);
+      tft.setTextColor(BLACK);
+      tft.println(t-i);
+      temps=millis();
+      i++;
+     
+   }
+ }
+  }
+ 
+  
+  unsigned long testText(int c1, int c2) {
+  
+  if(c1== 1 and millis()-t1>1800 and i<90){
+    s1++;
+    t1=millis();
+    
+    unsigned long start = micros();
+   
+    tft.setTextColor(WHITE); 
+    tft.setTextSize(6);
+    tft.setCursor(60,150);
+    tft.println(s1-1);
+    tft.setTextColor(RED); 
+    tft.setTextSize(6);
+    tft.setCursor(60,150);
+    tft.println(s1);
+    return micros() - start;
+  }
+  
+    if(c2== 1 and millis()-t2>800 and i<90){
+    s2++;
+    t2=millis();
+    unsigned long start = micros();
+ 
+    tft.setTextColor(WHITE); 
+    tft.setTextSize(6);
+    tft.setCursor(210,150);
+    tft.println(s2-1);
+    tft.setTextColor(BLUE); 
+    tft.setTextSize(6);
+    tft.setCursor(210,150);
+    tft.println(s2);
+  return micros() - start;
+  }
+  }
+  
+  
+
+int cap1State(){
+  int capstate1=0;
+  capstate1=analogRead(cap1);
+  if(capstate1>350){
+    return 1;}
+    else{
+      return 0;}
+}
+  
+int cap2State(){
+  
+  int capstate=0;
+  capstate=analogRead(cap2);
+
+  if(capstate>320){
+      
+    return 1;}
+    else{
+      return 0;}
+}
+
+
+ // draw a triangle   
+ unsigned long Triangles() {
+  unsigned long start;
+  int           dem, i, cx = 30,
+                      cy = 25;
+
+  dem     = 20;
+  start = micros();
+  for(i=dem; i>0; i-=1) {
+    tft.drawTriangle(
+      cx + i, cy  ,   // peak
+      cx - i, cy + i,// bottom left
+      cx - i, cy - i, // bottom right
+      GREEN);
+  } 
+}
+
+void start(){
+
+  while(commencer==0){
+  digitalWrite(13, HIGH);
+  TSPoint p = ts.getPoint();
+  digitalWrite(13, LOW);
+   pinMode(XM, OUTPUT);
+  pinMode(YP, OUTPUT);
+
+  if (p.z > 2 && p.z < 1000) {
+    if(p.y > 800 && p.x < 400){
+      i=0;
+      commencer=1;
+      
+    }
+  }
+  }
+}
+
+void arret(){
+  
+  digitalWrite(13, HIGH);
+  TSPoint p = ts.getPoint();
+  digitalWrite(13, LOW);
+   pinMode(XM, OUTPUT);
+  pinMode(YP, OUTPUT);
+  
+  if (p.z > 2 && p.z < 1000) {
+    if(p.y < 400 && p.x < 400){
+      setup();
+      temps=0;
+      t2=0;
+      s1=0;
+      s2=0;
+      i=0;
+     commencer=0;
+    }
+}
+   
+}
+
+void holdon(){
+ 
+  while(hold==1){
+  digitalWrite(13, HIGH);
+  TSPoint p = ts.getPoint();
+  digitalWrite(13, LOW);
+   pinMode(XM, OUTPUT);
+  pinMode(YP, OUTPUT);
+
+  if (p.z > 2 && p.z < 1000) {
+    if(p.y < 400 && p.x < 400){
+      hold=0;
+       setup();
+      temps=0;
+      t2=0;
+      s1=0;
+      s2=0;
+      i=0;
+     commencer=0;
+    }
+  }
+  }
+}
+  
+  
+  
+
+  
+  
